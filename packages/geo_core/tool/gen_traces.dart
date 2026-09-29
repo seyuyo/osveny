@@ -61,10 +61,6 @@ List<Fix> _walk30min() {
     climbMPerKm: -20,
     altNoiseM: 1.5,
   );
-  final bWithFaults = withGap(
-    withJump(b, 200),
-    t0 + 1500000,
-    t0 + 1560000,
-  );
+  final bWithFaults = withGap(withJump(b, 200), t0 + 1500000, t0 + 1560000);
   return [...a, ...stop, ...bWithFaults];
 }
