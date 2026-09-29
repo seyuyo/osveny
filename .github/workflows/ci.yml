@@ -22,6 +22,13 @@ jobs:
       - run: dart test --coverage=coverage
       - name: Lefedettségi riport (lcov)
         run: dart run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib --check-ignore
+      - name: Lefedettségi kapu (>= 95%)
+        shell: bash
+        run: |
+          awk -F: '/^DA:/{split($2,a,","); t++; if (a[2]>0) h++} END{
+            pct = t ? 100*h/t : 0;
+            printf "Sorlefedettség: %.1f%% (%d/%d)\n", pct, h, t;
+            if (pct < 95) exit 1 }' coverage/lcov.info | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: geo_core-coverage

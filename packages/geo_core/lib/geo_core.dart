@@ -7,5 +7,6 @@ export 'src/filter_pipeline.dart';
 export 'src/geo.dart';
 export 'src/off_route.dart';
 export 'src/package_info.dart';
+export 'src/recording_state.dart';
 export 'src/simplify.dart';
 export 'src/stats.dart';
