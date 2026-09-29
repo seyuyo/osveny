@@ -1,0 +1,10 @@
+﻿# Dart / Flutter
+.dart_tool/
+.packages
+build/
+coverage/
+*.iml
+.idea/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock.bak
