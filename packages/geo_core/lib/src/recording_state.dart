@@ -37,6 +37,7 @@ const Map<RecState, Map<RecEvent, RecState>> _transitions = {
   RecState.paused: {
     RecEvent.resume: RecState.recording,
     RecEvent.finish: RecState.finished,
+    RecEvent.foundUnfinished: RecState.interrupted,
   },
   RecState.interrupted: {
     RecEvent.resume: RecState.recording,
@@ -56,13 +57,18 @@ RecState nextState(RecState from, RecEvent event) {
   return next;
 }
 
-/// Indulási állapot: ha a legutóbbi túra `recording` státuszú, de a folyamat
-/// új, akkor a rögzítés megszakadt.
+/// Indulási állapot: ha a legutóbbi túra `recording` vagy `paused` státuszú,
+/// de a folyamat új, akkor a rögzítés megszakadt. A `paused` is ide tartozik
+/// (eltérés a spec 8. fejezetétől, lásd DECISIONS.md): a szüneteltetett, majd
+/// kilőtt túra különben árván maradna.
 RecState deriveOnStartup({
   required TrackStatus? latestTrackStatus,
   required bool isNewProcess,
 }) {
-  if (isNewProcess && latestTrackStatus == TrackStatus.recording) {
+  final unfinished =
+      latestTrackStatus == TrackStatus.recording ||
+      latestTrackStatus == TrackStatus.paused;
+  if (isNewProcess && unfinished) {
     return nextState(RecState.idle, RecEvent.foundUnfinished);
   }
   return RecState.idle;

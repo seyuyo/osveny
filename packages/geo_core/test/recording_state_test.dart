@@ -8,6 +8,7 @@ void main() {
     (RecState.recording, RecEvent.pause, RecState.paused),
     (RecState.recording, RecEvent.finish, RecState.finished),
     (RecState.recording, RecEvent.foundUnfinished, RecState.interrupted),
+    (RecState.paused, RecEvent.foundUnfinished, RecState.interrupted),
     (RecState.paused, RecEvent.resume, RecState.recording),
     (RecState.paused, RecEvent.finish, RecState.finished),
     (RecState.interrupted, RecEvent.resume, RecState.recording),
@@ -63,8 +64,28 @@ void main() {
       );
     });
 
-    test('lezárt, szüneteltetett vagy nincs túra: idle', () {
-      for (final s in [TrackStatus.finished, TrackStatus.paused, null]) {
+    test('új folyamat + paused státusz: megszakadt, nem marad árván', () {
+      expect(
+        deriveOnStartup(
+          latestTrackStatus: TrackStatus.paused,
+          isNewProcess: true,
+        ),
+        RecState.interrupted,
+      );
+    });
+
+    test('ugyanaz a folyamat + paused: nem megszakadt', () {
+      expect(
+        deriveOnStartup(
+          latestTrackStatus: TrackStatus.paused,
+          isNewProcess: false,
+        ),
+        RecState.idle,
+      );
+    });
+
+    test('lezárt vagy nincs túra: idle', () {
+      for (final s in [TrackStatus.finished, null]) {
         expect(
           deriveOnStartup(latestTrackStatus: s, isNewProcess: true),
           RecState.idle,
