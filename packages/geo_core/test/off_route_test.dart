@@ -7,12 +7,8 @@ final route = [for (var i = 0; i <= 100; i++) LatLon(0, i * 0.001)];
 // Északi eltolás méterben -> fok (1 fok ~111 195 m).
 double northDeg(double meters) => meters / 111195;
 
-Fix at(int i, double lonDeg, double offsetM) => Fix(
-  tMs: i * 1000,
-  latDeg: northDeg(offsetM),
-  lonDeg: lonDeg,
-  hAccM: 5,
-);
+Fix at(int i, double lonDeg, double offsetM) =>
+    Fix(tMs: i * 1000, latDeg: northDeg(offsetM), lonDeg: lonDeg, hAccM: 5);
 
 OffRouteResult feed(
   OffRouteDetector d,

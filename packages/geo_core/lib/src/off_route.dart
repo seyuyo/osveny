@@ -56,10 +56,7 @@ class OffRouteResult {
 /// Letérés-érzékelő egy tervezett útvonalhoz. Az állapotot a hívó tartja,
 /// `update` új állapotot ad vissza.
 class OffRouteDetector {
-  const OffRouteDetector(
-    this.route, [
-    this.config = const OffRouteConfig(),
-  ]);
+  const OffRouteDetector(this.route, [this.config = const OffRouteConfig()]);
 
   final List<LatLon> route;
   final OffRouteConfig config;

@@ -5,6 +5,7 @@ export 'src/fix.dart';
 export 'src/elevation.dart';
 export 'src/filter_pipeline.dart';
 export 'src/geo.dart';
+export 'src/off_route.dart';
 export 'src/package_info.dart';
 export 'src/simplify.dart';
 export 'src/stats.dart';
