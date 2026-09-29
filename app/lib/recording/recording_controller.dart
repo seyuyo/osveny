@@ -122,6 +122,9 @@ class RecordingController extends Notifier<RecordingSnapshot> {
   Timer? _flushTimer;
   Future<void> _writeChain = Future.value();
 
+  /// A megjelenített hiba a helyforrásé (és nem mentési hiba).
+  bool _sourceErrorShown = false;
+
   AppDatabase get _db => ref.read(databaseProvider);
   int get _now => ref.read(clockProvider)();
 
@@ -255,7 +258,10 @@ class RecordingController extends Notifier<RecordingSnapshot> {
         .fixes(profile)
         .listen(
           _onFix,
-          onError: (Object e) => _setError('Helyforrás: $e'),
+          onError: (Object e) {
+            _setError('Helyforrás: $e');
+            _sourceErrorShown = true;
+          },
           onDone: () {
             if (!done.isCompleted) done.complete();
           },
@@ -288,7 +294,11 @@ class RecordingController extends Notifier<RecordingSnapshot> {
           ? recent.sublist(recent.length - recentLimit)
           : recent,
       pendingCount: _buffer.length,
+      // Beérkező fix: a forrás korábbi hibája már nem igaz. A mentési hibát
+      // csak sikeres mentés törli.
+      clearError: _sourceErrorShown,
     );
+    _sourceErrorShown = false;
 
     if (_buffer.length >= ref.read(batchConfigProvider).maxCount) {
       unawaited(_flush());
@@ -321,8 +331,10 @@ class RecordingController extends Notifier<RecordingSnapshot> {
         if (ref.mounted && state.error != null) {
           state = state.copyWith(clearError: true);
         }
+        _sourceErrorShown = false;
       } catch (e) {
         _buffer.insertAll(0, batch);
+        _sourceErrorShown = false;
         if (ref.mounted) {
           state = state.copyWith(
             pendingCount: _buffer.length,

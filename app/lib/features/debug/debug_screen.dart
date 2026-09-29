@@ -48,7 +48,10 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
     final snap = ref.watch(recordingControllerProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Ösvény · debug')),
+      // Stretch: a gyerekek teljes szélességet kapnak, így a saját
+      // bal oldali igazításuk érvényesül (alapból középre csúsznának).
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _StatusBar(snap: snap),
           if (snap.recState == RecState.interrupted)
@@ -73,6 +76,10 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
+                  // Bal belső margó nélkül az ikon a többi elemmel egy vonalba esik.
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsetsDirectional.only(end: 12),
+                  ),
                   onPressed: () => _export(snap.trackId!),
                   icon: const Icon(Icons.ios_share),
                   label: const Text('CSV exportálás'),

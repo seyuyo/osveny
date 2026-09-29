@@ -252,6 +252,29 @@ void main() {
     );
   });
 
+  testWidgets('a gombok, a statisztika és az export egy vonalban, balra', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    double left(Finder f) => tester.getTopLeft(f).dx;
+
+    final statsLeft = left(find.textContaining('Elfogadva:'));
+    expect(
+      left(find.byType(SegmentedButton<TrackProfile>)),
+      moreOrLessEquals(statsLeft),
+    );
+    expect(left(find.byType(FilledButton)), moreOrLessEquals(statsLeft));
+
+    await tapAndSettle(
+      tester,
+      'Rögzítés indítása',
+      until: () => shows('Rögzítés folyamatban'),
+    );
+    final pauseLeft = left(find.widgetWithText(FilledButton, 'Szünet'));
+    expect(pauseLeft, moreOrLessEquals(statsLeft));
+    expect(left(find.byIcon(Icons.ios_share)), moreOrLessEquals(statsLeft));
+  });
+
   testWidgets('a helyforrás hibája látszik, nem nyelődik el', (tester) async {
     await pumpScreen(tester, source: _FailingSource());
     await tapAndSettle(

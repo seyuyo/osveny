@@ -424,6 +424,26 @@ void main() {
     },
   );
 
+  test('a forrás hibája a következő fixnél eltűnik', () async {
+    await ctrl().start(profile: TrackProfile.precise);
+    source.controller.addError(StateError('átmeneti hiba'));
+    await pumpEventQueue();
+    expect(snap().error, isNotNull);
+
+    await feed([fix(0)]);
+    expect(snap().error, isNull);
+  });
+
+  test('a mentési hibát egy beérkező fix nem takarja el', () async {
+    await ctrl().start(profile: TrackProfile.precise);
+    db.failWrites = true;
+    await feed([for (var i = 0; i < 10; i++) fix(i * 1000)]);
+    expect(snap().error, contains('Mentés sikertelen'));
+
+    await feed([fix(10000)]);
+    expect(snap().error, contains('Mentés sikertelen'));
+  });
+
   test('sourceDone: a visszajátszás vége jelezhető', () async {
     await ctrl().start(profile: TrackProfile.precise);
     var done = false;

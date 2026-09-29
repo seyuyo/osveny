@@ -77,6 +77,15 @@ void main() {
       expect(s.distanceFilter, 5);
     });
 
+    test('a rendszer LocationManagerét használja, nem a Play Services-t', () {
+      // A Play Services beállítás-ellenőrzése előtér-szolgáltatás módban
+      // Activity nélkül fut, és kikapcsolt Google-helypontosságnál tévesen
+      // „helyszolgáltatás kikapcsolva" hibát ad (lásd DECISIONS.md).
+      for (final p in TrackProfile.values) {
+        expect(settings(p).forceLocationManager, isTrue, reason: '$p');
+      }
+    });
+
     test('mindkét profil előtér-szolgáltatással és wake lockkal fut', () {
       for (final p in TrackProfile.values) {
         final n = settings(p).foregroundNotificationConfig;
@@ -85,6 +94,23 @@ void main() {
         expect(n.setOngoing, isTrue);
         expect(n.notificationTitle, isNotEmpty);
       }
+    });
+  });
+
+  group('describeLocationError', () {
+    test('a geolocator hibái magyarul, érthetően', () {
+      expect(
+        describeLocationError(const LocationServiceDisabledException()),
+        contains('helymeghatározás'),
+      );
+      expect(
+        describeLocationError(const PermissionDeniedException('x')),
+        contains('engedély'),
+      );
+    });
+
+    test('ismeretlen hiba: a szövege megmarad', () {
+      expect(describeLocationError(StateError('valami')), contains('valami'));
     });
   });
 

@@ -36,6 +36,10 @@ LocationSettings locationSettingsFor(
     return LocationSettings(accuracy: accuracy, distanceFilter: distanceFilter);
   }
   return AndroidSettings(
+    // A Play Services helyett a rendszer LocationManagere (Android 12+: a
+    // platform fused providere). A Play Services útvonala előtér-szolgáltatás
+    // módban kikapcsolt Google-helypontosságnál el sem indul (DECISIONS.md).
+    forceLocationManager: true,
     accuracy: accuracy,
     distanceFilter: distanceFilter,
     intervalDuration: Duration(seconds: precise ? 1 : 5),
@@ -49,13 +53,29 @@ LocationSettings locationSettingsFor(
   );
 }
 
+/// A `geolocator` hibái a felhasználónak szóló szöveggé.
+String describeLocationError(Object error) => switch (error) {
+  LocationServiceDisabledException() =>
+    'A telefon helymeghatározása ki van kapcsolva vagy nem érhető el.',
+  PermissionDeniedException() => 'Nincs helyengedély.',
+  PermissionRequestInProgressException() =>
+    'Engedélykérés folyamatban, próbáld újra.',
+  _ => '$error',
+};
+
 /// A `geolocator` csomag helyforrása. Az engedélyeket a hívó (a
 /// `PermissionFlow`) intézi a rögzítés indítása előtt.
 class GeolocatorLocationSource implements LocationSource {
   const GeolocatorLocationSource();
 
   @override
-  Stream<Fix> fixes(TrackProfile profile) => Geolocator.getPositionStream(
-    locationSettings: locationSettingsFor(profile),
-  ).map(fixFromPosition);
+  Stream<Fix> fixes(TrackProfile profile) =>
+      Geolocator.getPositionStream(
+            locationSettings: locationSettingsFor(profile),
+          )
+          .map(fixFromPosition)
+          .handleError(
+            (Object e) =>
+                throw LocationSourceException(describeLocationError(e)),
+          );
 }

@@ -13,6 +13,16 @@ abstract interface class LocationSource {
   Stream<Fix> fixes(TrackProfile profile);
 }
 
+/// A helyforrás felhasználónak megjeleníthető hibája.
+class LocationSourceException implements Exception {
+  const LocationSourceException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 /// Felvett vagy szintetikus nyomvonal visszajátszása: integrációs tesztekhez
 /// és GPS nélküli demóhoz. A fixeket változtatás nélkül adja, a `tMs` a
 /// bemeneté.
