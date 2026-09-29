@@ -93,6 +93,20 @@ class AppDatabase extends _$AppDatabase {
             ..limit(1))
           .getSingleOrNull();
 
+  Future<TrackRow?> trackById(int id) =>
+      (select(tracks)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  /// A túra utolsó nyers fixének ideje; `null`, ha még nincs fix.
+  Future<int?> lastFixTMs(int trackId) async {
+    final maxT = fixes.tMs.max();
+    final row =
+        await (selectOnly(fixes)
+              ..where(fixes.trackId.equals(trackId))
+              ..addColumns([maxT]))
+            .getSingle();
+    return row.read(maxT);
+  }
+
   Future<void> setStatus(
     int trackId,
     TrackStatus status, {

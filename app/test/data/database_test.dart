@@ -121,6 +121,27 @@ void main() {
     expect(t.statsJson, '{"distanceM":12.5}');
   });
 
+  test('trackById: létező és nem létező túra', () async {
+    final id = await db.createTrack(
+      name: 'T',
+      profile: TrackProfile.batterySaver,
+      startedAtMs: 7,
+    );
+    expect((await db.trackById(id))!.startedAtMs, 7);
+    expect(await db.trackById(id + 1), isNull);
+  });
+
+  test('lastFixTMs: a legnagyobb tMs, üres túrára null', () async {
+    final id = await db.createTrack(
+      name: 'T',
+      profile: TrackProfile.precise,
+      startedAtMs: 0,
+    );
+    expect(await db.lastFixTMs(id), isNull);
+    await db.insertFixBatch(id, [fix(5000), fix(1000), fix(3000)]);
+    expect(await db.lastFixTMs(id), 5000);
+  });
+
   test('szegmensek: nyitás, zárás, csak a nyitottat zárja', () async {
     final id = await db.createTrack(
       name: 'T',
