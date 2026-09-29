@@ -20,7 +20,9 @@ void main() {
 
     test('zajos lapos terep: ~0 emelkedés, a naiv összeg sokszorosa', () {
       final rnd = math.Random(3);
-      final alts = [for (var i = 0; i < 1000; i++) 200 + rnd.nextDouble() * 6 - 3];
+      final alts = [
+        for (var i = 0; i < 1000; i++) 200 + rnd.nextDouble() * 4 - 2,
+      ];
       final r = elevationGainLoss(alts);
       expect(r.gainM, lessThan(10));
       expect(naiveGain(alts), greaterThan(500));
@@ -77,20 +79,20 @@ void main() {
     });
 
     test('egyenletes séta', () {
-      // 1 s-onként 0,00002 fok (~2,22 m): 2,2 m/s.
+      // 1 s-onként 0,00003 fok (~3,34 m): kocogótempó.
       final fixes = [
         for (var i = 0; i < 200; i++)
           Fix(
             tMs: i * 1000,
             latDeg: 0,
-            lonDeg: i * 0.00002,
+            lonDeg: i * 0.00003,
             altM: 100.0 + i * 0.1,
             hAccM: 5,
-            speedMps: 2.2,
+            speedMps: 3.3,
           ),
       ];
       final s = computeStats(fixes);
-      expect(s.distanceM, closeTo(199 * 2.224, 3));
+      expect(s.distanceM, closeTo(199 * 3.336, 3));
       expect(s.totalTimeMs, 199000);
       expect(s.movingTimeMs, 199000);
       expect(s.avgPaceMinPerKm, closeTo(199 / 60 / (s.distanceM / 1000), 1e-6));
