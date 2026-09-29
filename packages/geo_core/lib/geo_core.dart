@@ -2,6 +2,7 @@
 library;
 
 export 'src/fix.dart';
+export 'src/filter_pipeline.dart';
 export 'src/geo.dart';
 export 'src/package_info.dart';
 export 'src/simplify.dart';
