@@ -11,9 +11,15 @@ import 'package:geo_core/geo_core.dart';
 class LiveTrack {
   final _segments = <List<Fix>>[];
   int _version = 0;
+  int _generation = 0;
 
   /// Minden módosítás után nő; a figyelők ez alapján rajzolnak újra.
   int get version => _version;
+
+  /// Akkor nő, ha a tartalom nem csak bővült (új túra, feltöltés a tárolt
+  /// pontokból). Azonos generáción belül csak hozzáfűzés történik: pont az
+  /// utolsó szegmens végére, vagy új szegmens. A növekményes ritkítás erre épít.
+  int get generation => _generation;
 
   /// A szegmensek, a régebbi elöl. Csak olvasható nézet.
   List<List<Fix>> get segments => UnmodifiableListView([
@@ -37,6 +43,7 @@ class LiveTrack {
       ..clear()
       ..add(<Fix>[]);
     _version++;
+    _generation++;
   }
 
   /// Új szegmens (folytatás szünet vagy megszakadás után).
@@ -57,5 +64,6 @@ class LiveTrack {
       ..clear()
       ..add(List<Fix>.of(accepted));
     _version++;
+    _generation++;
   }
 }
