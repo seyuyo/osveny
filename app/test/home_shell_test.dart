@@ -8,9 +8,12 @@ import 'package:osveny/data/database.dart';
 import 'package:osveny/map/map_library_controller.dart';
 import 'package:osveny/map/map_store.dart';
 import 'package:osveny/home_shell.dart';
+import 'package:osveny/permissions/permission_gateway.dart';
 import 'package:osveny/recording/location_source.dart';
 import 'package:osveny/recording/recording_controller.dart';
 import 'package:osveny/recording/track_profile.dart';
+
+import 'permissions/fake_permission_gateway.dart';
 
 void main() {
   Future<void> pumpShell(WidgetTester tester) async {
@@ -28,6 +31,11 @@ void main() {
             ),
           ),
           locationSourceProvider.overrideWithValue(ReplayLocationSource([])),
+          permissionGatewayProvider.overrideWithValue(
+            FakeGateway()
+              ..access = LocationAccess.granted
+              ..notification = true,
+          ),
         ],
         child: const MaterialApp(home: HomeShell()),
       ),
@@ -70,6 +78,7 @@ void main() {
       ),
     );
     await tester.pump();
+    await tester.pump();
 
     expect(find.text('Ösvény · debug'), findsOneWidget);
     expect(find.text('Rögzítés indítása'), findsOneWidget);
@@ -88,6 +97,7 @@ void main() {
         matching: find.text('Debug'),
       ),
     );
+    await tester.pump();
     await tester.pump();
     // A profilválasztás a DebugScreen helyi állapota.
     await tester.tap(find.text('Akkukímélő'));

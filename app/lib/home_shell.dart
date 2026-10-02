@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'features/debug/debug_screen.dart';
 import 'map/map_screen.dart';
+import 'permissions/permission_gate.dart';
 
 /// Az alkalmazás főképernyője: alsó navigációs sáv a Térkép és a Debug fül
 /// között. Az `IndexedStack` megőrzi a fülök állapotát (térképnézet, a debug
@@ -21,7 +22,13 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       body: IndexedStack(
         index: _index,
-        children: const [MapScreen(), DebugScreen()],
+        // Az engedélykapu csak a rögzítést védi: a térkép megnyitásához és az
+        // importhoz nem kell helyzet, és helyszolgáltatás nélkül is működnie
+        // kell (offline használat).
+        children: const [
+          MapScreen(),
+          PermissionGate(child: DebugScreen()),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,

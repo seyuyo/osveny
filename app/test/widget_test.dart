@@ -15,10 +15,9 @@ import 'package:osveny/recording/recording_controller.dart';
 import 'permissions/fake_permission_gateway.dart';
 
 void main() {
-  testWidgets('első indítás: magyarázat, az engedély után a térkép fül', (
-    tester,
-  ) async {
-    final gw = FakeGateway();
+  late FakeGateway gw;
+
+  Future<void> pumpApp(WidgetTester tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(() => tester.runAsync(db.close));
 
@@ -39,13 +38,6 @@ void main() {
         child: const OsvenyApp(),
       ),
     );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Helyzet a túra rögzítéséhez'), findsOneWidget);
-    expect(find.text('Rögzítés indítása'), findsNothing);
-    expect(gw.calls, isNot(contains('requestLocation')));
-
-    await tester.tap(find.text('Tovább'));
     await tester.pump();
     // A térképmappa beolvasása több lépésből álló valódi fájl-I/O: a
     // `runAsync` (valódi idő) és a `pump` (a folytatások lefuttatása)
@@ -59,18 +51,65 @@ void main() {
       if (find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
     }
     await tester.pumpAndSettle();
+  }
 
-    // A kezdőképernyő a Térkép fül; a rögzítés-vezérlés a Debug fülön van.
-    expect(find.byKey(const Key('map-tab')), findsOneWidget);
-
+  Future<void> openTab(WidgetTester tester, String label) async {
     await tester.tap(
       find.descendant(
         of: find.byType(NavigationBar),
-        matching: find.text('Debug'),
+        matching: find.text(label),
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  setUp(() => gw = FakeGateway());
+
+  testWidgets('a térkép engedély és helyszolgáltatás nélkül is használható', (
+    tester,
+  ) async {
+    // A helyszolgáltatás ki van kapcsolva: az offline térkép ettől még
+    // megnyitható és importálható, az app nem kér engedélyt.
+    gw.access = LocationAccess.serviceOff;
+    await pumpApp(tester);
+
+    expect(find.byKey(const Key('map-tab')), findsOneWidget);
+    expect(find.text('Még nincs térkép'), findsOneWidget);
+    expect(find.text('Térkép importálása'), findsOneWidget);
+    expect(find.textContaining('helyszolgáltatás'), findsNothing);
+    expect(gw.calls, isNot(contains('requestLocation')));
+  });
+
+  testWidgets('a Debug fülön az engedélykérés magyarázattal indul', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await openTab(tester, 'Debug');
+
+    expect(find.text('Helyzet a túra rögzítéséhez'), findsOneWidget);
+    expect(find.text('Rögzítés indítása'), findsNothing);
+    expect(gw.calls, isNot(contains('requestLocation')));
+
+    await tester.tap(find.text('Tovább'));
+    await tester.pumpAndSettle();
+
+    expect(gw.calls, contains('requestLocation'));
     expect(find.text('Rögzítés indítása'), findsOneWidget);
     expect(find.text('Ösvény · debug'), findsOneWidget);
+  });
+
+  testWidgets('kikapcsolt helyszolgáltatásnál a Debug fül magyarázza el', (
+    tester,
+  ) async {
+    gw.access = LocationAccess.serviceOff;
+    await pumpApp(tester);
+    await openTab(tester, 'Debug');
+
+    expect(find.text('A helyszolgáltatás ki van kapcsolva'), findsOneWidget);
+    expect(find.text('Rögzítés indítása'), findsNothing);
+
+    // A Térkép fül közben továbbra is elérhető.
+    await openTab(tester, 'Térkép');
+    expect(find.text('Még nincs térkép'), findsOneWidget);
   });
 }

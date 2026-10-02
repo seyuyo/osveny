@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'home_shell.dart';
-import 'permissions/permission_gate.dart';
 
-/// Az alkalmazás gyökere: a főképernyő (Térkép és Debug fül) az
-/// engedélykérés kapuja mögött.
+/// Az alkalmazás gyökere: a főképernyő (Térkép és Debug fül). Az
+/// engedélykérés kapuja csak a rögzítést tartalmazó fület védi.
 class OsvenyApp extends StatelessWidget {
   const OsvenyApp({super.key});
 
@@ -20,7 +19,7 @@ class OsvenyApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const PermissionGate(child: HomeShell()),
+      home: const HomeShell(),
     );
   }
 }
