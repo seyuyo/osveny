@@ -162,6 +162,9 @@ class MapStore {
       );
     } on PmtilesFormatException {
       return null;
+    } on FileSystemException {
+      // Közben törölték (pl. párhuzamos takarítás): nincs ilyen térkép.
+      return null;
     }
   }
 
@@ -223,7 +226,11 @@ class MapStore {
     if (!await dir.exists()) return;
     await for (final entity in dir.list()) {
       if (entity is File && entity.path.endsWith('.part')) {
-        await entity.delete();
+        try {
+          await entity.delete();
+        } on FileSystemException {
+          // Már törölték (párhuzamos takarítás): a cél úgyis az, hogy ne legyen.
+        }
       }
     }
   }
