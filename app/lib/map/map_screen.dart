@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'map_library_controller.dart';
 import 'map_library_screen.dart';
 import 'map_widgets.dart';
-import 'offline_map.dart';
+import 'live_map.dart';
 
 /// A Térkép fül. Térkép nélkül az importálást ajánlja fel; aktív térképnél a
 /// térkép tölti ki a képernyőt, jobb felül a térképek kezelésének gombjával.
@@ -33,7 +33,7 @@ class MapScreen extends ConsumerWidget {
       ),
       MapLibraryPhase.ready => Stack(
         children: [
-          Positioned.fill(child: OfflineMap(map: active!)),
+          Positioned.fill(child: LiveMap(map: active!)),
           Align(
             alignment: Alignment.topRight,
             child: Padding(
