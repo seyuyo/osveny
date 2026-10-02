@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geo_core/geo_core.dart';
 
 import '../data/database.dart';
+import 'live_track.dart';
 import 'location_source.dart';
 import 'track_profile.dart';
 
@@ -65,6 +66,7 @@ class RecordingSnapshot {
     this.recent = const [],
     this.pendingCount = 0,
     this.error,
+    this.liveVersion = 0,
   });
 
   final RecState recState;
@@ -82,6 +84,10 @@ class RecordingSnapshot {
   /// Az utolsó hiba (mentés vagy helyforrás); sikeres mentés törli.
   final String? error;
 
+  /// A [RecordingController.liveTrack] verziója: ha változik, az élő
+  /// nyomvonal is változott (a pontokat nem másoljuk a pillanatképbe).
+  final int liveVersion;
+
   RecordingSnapshot copyWith({
     RecState? recState,
     int? trackId,
@@ -92,6 +98,7 @@ class RecordingSnapshot {
     int? pendingCount,
     String? error,
     bool clearError = false,
+    int? liveVersion,
   }) => RecordingSnapshot(
     recState: recState ?? this.recState,
     trackId: trackId ?? this.trackId,
@@ -101,6 +108,7 @@ class RecordingSnapshot {
     recent: recent ?? this.recent,
     pendingCount: pendingCount ?? this.pendingCount,
     error: clearError ? null : (error ?? this.error),
+    liveVersion: liveVersion ?? this.liveVersion,
   );
 }
 
@@ -124,6 +132,10 @@ class RecordingController extends Notifier<RecordingSnapshot> {
 
   /// A megjelenített hiba a helyforrásé (és nem mentési hiba).
   bool _sourceErrorShown = false;
+
+  /// Az élő nyomvonal a térképhez; a változását a pillanatkép
+  /// [RecordingSnapshot.liveVersion] mezője jelzi.
+  final liveTrack = LiveTrack();
 
   AppDatabase get _db => ref.read(databaseProvider);
   int get _now => ref.read(clockProvider)();
@@ -156,13 +168,17 @@ class RecordingController extends Notifier<RecordingSnapshot> {
       latestTrackStatus: track?.status,
       isNewProcess: true,
     );
-    if (derived == RecState.interrupted && ref.mounted) {
-      state = RecordingSnapshot(
-        recState: derived,
-        trackId: track!.id,
-        profile: track.profile,
-      );
-    }
+    if (derived != RecState.interrupted) return;
+    // A térkép már a „Folytatás” előtt mutassa az eddigi utat.
+    final run = runFilter(await _db.fixesFor(track!.id));
+    if (!ref.mounted) return;
+    liveTrack.seed(run.accepted);
+    state = RecordingSnapshot(
+      recState: derived,
+      trackId: track.id,
+      profile: track.profile,
+      liveVersion: liveTrack.version,
+    );
   }
 
   Future<void> start({required TrackProfile profile, String? name}) async {
@@ -171,7 +187,12 @@ class RecordingController extends Notifier<RecordingSnapshot> {
         ? RecState.idle
         : state.recState;
     final next = nextState(from, RecEvent.start);
-    state = RecordingSnapshot(recState: next, profile: profile);
+    liveTrack.reset();
+    state = RecordingSnapshot(
+      recState: next,
+      profile: profile,
+      liveVersion: liveTrack.version,
+    );
 
     final now = _now;
     final id = await _db.createTrack(
@@ -209,6 +230,7 @@ class RecordingController extends Notifier<RecordingSnapshot> {
       await _db.closeOpenSegment(id, lastT ?? track!.startedAtMs);
       final run = runFilter(await _db.fixesFor(id));
       if (!ref.mounted) return;
+      liveTrack.seed(run.accepted);
       state = state.copyWith(
         filter: _withoutLast(run.state),
         dropCounts: run.dropCounts,
@@ -216,6 +238,8 @@ class RecordingController extends Notifier<RecordingSnapshot> {
     } else {
       state = state.copyWith(filter: _withoutLast(state.filter));
     }
+    liveTrack.startSegment();
+    state = state.copyWith(liveVersion: liveTrack.version);
 
     await _db.openSegment(id, _now);
     await _db.setStatus(id, TrackStatus.recording);
@@ -282,6 +306,8 @@ class RecordingController extends Notifier<RecordingSnapshot> {
     // A nyers fix mindenképp a pufferbe kerül; a szűrő csak a megjelenítést érinti.
     _buffer.add(fix);
     _armTimer();
+    // A térkép élő nyomvonala csak az elfogadott pontokat rajzolja.
+    if (reason == null) liveTrack.add(fix);
 
     final dropCounts = reason == null
         ? state.dropCounts
@@ -297,6 +323,7 @@ class RecordingController extends Notifier<RecordingSnapshot> {
       // Beérkező fix: a forrás korábbi hibája már nem igaz. A mentési hibát
       // csak sikeres mentés törli.
       clearError: _sourceErrorShown,
+      liveVersion: liveTrack.version,
     );
     _sourceErrorShown = false;
 

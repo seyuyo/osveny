@@ -444,6 +444,101 @@ void main() {
     expect(snap().error, contains('Mentés sikertelen'));
   });
 
+  group('élő nyomvonal (a térképhez)', () {
+    List<List<int>> segmentTimes() => [
+      for (final s in ctrl().liveTrack.segments) [for (final f in s) f.tMs],
+    ];
+
+    test('indításkor egy üres szegmens, verziószám a pillanatképben', () async {
+      await ctrl().start(profile: TrackProfile.precise);
+      expect(segmentTimes(), [<int>[]]);
+      expect(snap().liveVersion, ctrl().liveTrack.version);
+    });
+
+    test('csak az elfogadott fixek kerülnek bele', () async {
+      await ctrl().start(profile: TrackProfile.precise);
+      final before = snap().liveVersion;
+      await feed([fix(0), fix(1000, hAccM: 100), fix(2000)]);
+
+      expect(segmentTimes(), [
+        [0, 2000],
+      ]);
+      expect(snap().liveVersion, greaterThan(before));
+    });
+
+    test('szünet és folytatás után új szegmens', () async {
+      await ctrl().start(profile: TrackProfile.precise);
+      await feed([fix(0), fix(1000)]);
+      await ctrl().pause();
+      await ctrl().resume();
+      await feed([fix(20000), fix(21000)]);
+
+      expect(segmentTimes(), [
+        [0, 1000],
+        [20000, 21000],
+      ]);
+    });
+
+    test('lezárás után megmarad, új indításkor kiürül', () async {
+      await ctrl().start(profile: TrackProfile.precise);
+      await feed([fix(0), fix(1000)]);
+      await ctrl().finish();
+      expect(segmentTimes(), [
+        [0, 1000],
+      ]);
+
+      await ctrl().start(profile: TrackProfile.precise);
+      expect(segmentTimes(), [<int>[]]);
+    });
+
+    test('kívülről nem módosítható', () async {
+      await ctrl().start(profile: TrackProfile.precise);
+      expect(() => ctrl().liveTrack.segments.add([]), throwsUnsupportedError);
+      expect(
+        () => ctrl().liveTrack.segments.first.add(fix(0)),
+        throwsUnsupportedError,
+      );
+    });
+
+    test(
+      'megszakadt túra: a visszaállítás a tárolt fixekből tölti fel',
+      () async {
+        await ctrl().start(profile: TrackProfile.precise);
+        await feed([
+          for (var i = 0; i < 10; i++) fix(i * 1000, hAccM: i == 3 ? 100 : 5),
+        ]);
+        kill();
+        source = FakeSource();
+        container = makeContainer();
+
+        await ctrl().restore();
+
+        expect(snap().recState, RecState.interrupted);
+        expect(segmentTimes(), [
+          [0, 1000, 2000, 4000, 5000, 6000, 7000, 8000, 9000],
+        ], reason: 'a szűrő által eldobott fix (3000) nincs benne');
+        expect(snap().liveVersion, ctrl().liveTrack.version);
+      },
+    );
+
+    test('megszakadt túra folytatása: új szegmens a tárolt után', () async {
+      await ctrl().start(profile: TrackProfile.precise);
+      await feed([for (var i = 0; i < 10; i++) fix(i * 1000)]);
+      kill();
+      source = FakeSource();
+      container = makeContainer();
+
+      await ctrl().restore();
+      await ctrl().resume();
+      await feed([fix(600000)]);
+
+      final segs = segmentTimes();
+      expect(segs.length, 2);
+      expect(segs[0].length, 10);
+      expect(segs[1], [600000]);
+    });
+  });
+
   test('sourceDone: a visszajátszás vége jelezhető', () async {
     await ctrl().start(profile: TrackProfile.precise);
     var done = false;
