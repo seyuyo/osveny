@@ -60,19 +60,31 @@ class _OfflineMapState extends ConsumerState<OfflineMap> {
     return FutureBuilder<OpenedTileSource>(
       future: _opening,
       builder: (context, snapshot) {
-        if (snapshot.hasError) return const _OpenError();
-        final source = snapshot.data;
-        if (source == null) {
+        // Új `Future`-nél a FutureBuilder egy képkockára megtartja a régi
+        // adatot (vagy hibát): addig töltésjelzőt mutatunk, különben az új
+        // térkép nézete a régi csempeforrással épülne fel, és az újonnan
+        // megnyílt forrás érkezésekor már nem épülne újra.
+        if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
         }
-        return _MapView(map: widget.map, source: source);
+        if (snapshot.hasError) return const _OpenError();
+        final source = snapshot.requireData;
+        // A kulcs a fájl útvonala: másik térképre váltva a FlutterMap és a
+        // csemperéteg belső állapota (csempe-szolgáltató, kezdő
+        // kameraillesztés) újraépül. Enélkül valódi eszközön a régi térkép
+        // állapota ragadt a rétegben, és az új térkép üresen maradt.
+        return _MapView(
+          key: ValueKey(widget.map.path),
+          map: widget.map,
+          source: source,
+        );
       },
     );
   }
 }
 
 class _MapView extends StatelessWidget {
-  const _MapView({required this.map, required this.source});
+  const _MapView({super.key, required this.map, required this.source});
 
   final InstalledMap map;
   final OpenedTileSource source;

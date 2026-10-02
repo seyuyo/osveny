@@ -240,6 +240,54 @@ void main() {
     expect(find.byType(VectorTileLayer), findsOneWidget);
   });
 
+  testMap(
+    'másik térképre váltva a FlutterMap és a csemperéteg állapota újraépül',
+    (tester) async {
+      // Valódi eszközön a régi térkép állapota ragadt a rétegben, és az új
+      // térkép üresen maradt: a belső állapot (csempe-szolgáltató, kezdő
+      // kameraillesztés) csak újraépítéssel frissül. Az elemek azonosságát
+      // vizsgáljuk: újraépítéskor új elem jön létre.
+      await tester.pumpWidget(host(installedMap(name: 'a.pmtiles')));
+      await tester.pump();
+      await tester.pump();
+      final mapBefore = tester.element(find.byType(FlutterMap));
+      final layerBefore = tester.element(find.byType(VectorTileLayer));
+
+      await tester.pumpWidget(host(installedMap(name: 'b.pmtiles')));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        identical(tester.element(find.byType(FlutterMap)), mapBefore),
+        isFalse,
+        reason: 'új FlutterMap kell, hogy az új fájl határaira illeszkedjen',
+      );
+      expect(
+        identical(tester.element(find.byType(VectorTileLayer)), layerBefore),
+        isFalse,
+        reason: 'új csemperéteg kell az új csempe-szolgáltatóval',
+      );
+    },
+  );
+
+  testMap('ugyanazon térkép újraépítésénél az állapot megmarad', (
+    tester,
+  ) async {
+    final map = installedMap();
+    await tester.pumpWidget(host(map));
+    await tester.pump();
+    await tester.pump();
+    final mapBefore = tester.element(find.byType(FlutterMap));
+
+    await tester.pumpWidget(host(map));
+    await tester.pump();
+
+    expect(
+      identical(tester.element(find.byType(FlutterMap)), mapBefore),
+      isTrue,
+    );
+  });
+
   testMap('ugyanannak a térképnek az újraépítése nem nyit újra', (
     tester,
   ) async {
