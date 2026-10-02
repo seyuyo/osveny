@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'format_bytes.dart';
 import 'map_library_controller.dart';
 import 'map_library_screen.dart';
 import 'map_widgets.dart';
+import 'offline_map.dart';
 
-/// A Térkép fül. Térkép nélkül az importálást ajánlja fel; a térkép
-/// megjelenítése az M3.2 lépésben jön, addig az aktív térképet összegzi.
+/// A Térkép fül. Térkép nélkül az importálást ajánlja fel; aktív térképnél a
+/// térkép tölti ki a képernyőt, jobb felül a térképek kezelésének gombjával.
 class MapScreen extends ConsumerWidget {
   const MapScreen({super.key});
 
@@ -31,30 +31,25 @@ class MapScreen extends ConsumerWidget {
           label: const Text('Térkép importálása'),
         ),
       ),
-      MapLibraryPhase.ready => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Aktív térkép: ${active!.name}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${formatBytes(active.sizeBytes)} · '
-              'zoom ${active.info.minZoom}–${active.info.maxZoom}',
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const MapLibraryScreen(),
+      MapLibraryPhase.ready => Stack(
+        children: [
+          Positioned.fill(child: OfflineMap(map: active!)),
+          Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: IconButton.filledTonal(
+                tooltip: 'Térképek kezelése',
+                icon: const Icon(Icons.layers),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const MapLibraryScreen(),
+                  ),
                 ),
               ),
-              child: const Text('Térképek kezelése'),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     };
 

@@ -8,6 +8,8 @@ import 'package:osveny/map/map_library_controller.dart';
 import 'package:osveny/map/map_library_screen.dart';
 import 'package:osveny/map/map_screen.dart';
 import 'package:osveny/map/map_store.dart';
+import 'package:osveny/map/offline_map.dart';
+import 'package:osveny/map/tile_source.dart';
 
 import 'map_test_helpers.dart';
 import 'pmtiles_fixture.dart';
@@ -33,6 +35,7 @@ void main() {
         overrides: [
           mapStoreProvider.overrideWithValue(store),
           mapFilePickerProvider.overrideWithValue(picker),
+          tileSourceOpenerProvider.overrideWithValue(fakeTileSourceOpener),
         ],
         child: MaterialApp(home: home),
       ),
@@ -58,7 +61,17 @@ void main() {
     fail('a várt állapot nem állt be');
   }
 
+  /// A ector_map_tiles réteg initState-je 3 másodperces Future.delayed-et
+  /// indít, amit a dispose nem állít le: a fa lebontása után léptetjük az
+  /// órát, különben a teszt függő időzítő miatt elbukna.
+  Future<void> drainMapTimers(WidgetTester tester) async {
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 4));
+  }
+
   bool shows(String text) => find.text(text).evaluate().isNotEmpty;
+  bool showsMap() => find.byType(OfflineMap).evaluate().isNotEmpty;
+
   bool showsText(String part) =>
       find.textContaining(part).evaluate().isNotEmpty;
 
@@ -99,11 +112,12 @@ void main() {
         await settle(tester, () => shows('Még nincs térkép'));
 
         await tester.tap(find.text('Térkép importálása'));
-        await settle(tester, () => showsText('pilis.pmtiles'));
+        await settle(tester, () => showsMap());
 
         expect(picker.calls, 1);
         expect(find.text('Még nincs térkép'), findsNothing);
-        expect(find.text('Térképek kezelése'), findsOneWidget);
+        expect(find.byTooltip('Térképek kezelése'), findsOneWidget);
+        await drainMapTimers(tester);
       },
     );
 
@@ -165,17 +179,19 @@ void main() {
       expect(bar.value, anyOf(isNull, inInclusiveRange(0.0, 1.0)));
       expect(showsText('Importálás'), isTrue);
 
-      await settle(tester, () => showsText('lassu.pmtiles'));
+      await settle(tester, () => showsMap());
+      await drainMapTimers(tester);
     });
 
     testWidgets('telepített térképnél a kezelőoldalra visz', (tester) async {
       await installed(tester, 'a.pmtiles');
       await pump(tester, const MapScreen());
-      await settle(tester, () => showsText('a.pmtiles'));
+      await settle(tester, () => showsMap());
 
-      await tester.tap(find.text('Térképek kezelése'));
+      await tester.tap(find.byTooltip('Térképek kezelése'));
       await tester.pumpAndSettle();
       expect(find.byType(MapLibraryScreen), findsOneWidget);
+      await drainMapTimers(tester);
     });
   });
 
