@@ -12,9 +12,28 @@ import 'tile_source.dart';
 /// Protomaps-témával (a séma és a rendszer világos/sötét módja szerint).
 /// Hálózati kérés nincs: a csempék a helyi fájlból jönnek.
 class OfflineMap extends ConsumerStatefulWidget {
-  const OfflineMap({super.key, required this.map});
+  const OfflineMap({
+    super.key,
+    required this.map,
+    this.mapController,
+    this.onMapEvent,
+    this.onMapReady,
+    this.layers = const [],
+  });
 
   final InstalledMap map;
+
+  /// A kamera vezérléséhez (követő mód); ha nincs, a térkép sajátot használ.
+  final MapController? mapController;
+
+  /// A térkép eseményei (pl. kézi mozgatás felismeréséhez).
+  final MapEventCallback? onMapEvent;
+
+  /// Akkor hívódik, amikor a [mapController] már használható.
+  final VoidCallback? onMapReady;
+
+  /// Rétegek a csempék fölé (nyomvonal, pozíció).
+  final List<Widget> layers;
 
   @override
   ConsumerState<OfflineMap> createState() => _OfflineMapState();
@@ -77,6 +96,10 @@ class _OfflineMapState extends ConsumerState<OfflineMap> {
           key: ValueKey(widget.map.path),
           map: widget.map,
           source: source,
+          mapController: widget.mapController,
+          onMapEvent: widget.onMapEvent,
+          onMapReady: widget.onMapReady,
+          layers: widget.layers,
         );
       },
     );
@@ -84,10 +107,22 @@ class _OfflineMapState extends ConsumerState<OfflineMap> {
 }
 
 class _MapView extends StatelessWidget {
-  const _MapView({super.key, required this.map, required this.source});
+  const _MapView({
+    super.key,
+    required this.map,
+    required this.source,
+    required this.mapController,
+    required this.onMapEvent,
+    required this.onMapReady,
+    required this.layers,
+  });
 
   final InstalledMap map;
   final OpenedTileSource source;
+  final MapController? mapController;
+  final MapEventCallback? onMapEvent;
+  final VoidCallback? onMapReady;
+  final List<Widget> layers;
 
   /// A letöltött területen túl a nagyítás a csempék legnagyobb zoomjánál
   /// ennyivel mehet tovább: a vektoros csempék élesen felskálázhatók.
@@ -115,7 +150,15 @@ class _MapView extends StatelessWidget {
       key: const Key('offline-map'),
       children: [
         FlutterMap(
+          mapController: mapController,
           options: MapOptions(
+            onMapEvent: onMapEvent,
+            onMapReady: onMapReady,
+            // Az illesztés előtti kezdő kamera is a terület közepére kerül:
+            // külső MapControllernél a flutter_map ezt is ellenőrzi a
+            // `containCenter` korláttal, és az alapértelmezett (é. sz. 50°,
+            // k. h. 0°) közép assert-hibát adna.
+            initialCenter: bounds.center,
             initialCameraFit: CameraFit.bounds(
               bounds: bounds,
               padding: const EdgeInsets.all(16),
@@ -135,6 +178,7 @@ class _MapView extends StatelessWidget {
               // elavult csempét adhatna (DECISIONS.md).
               fileCacheTtl: Duration.zero,
             ),
+            ...layers,
           ],
         ),
         const Align(

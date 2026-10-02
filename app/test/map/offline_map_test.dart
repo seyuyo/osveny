@@ -202,6 +202,93 @@ void main() {
     });
   });
 
+  group('bővítési pontok az élő térképhez', () {
+    testMap('a rétegek a csempék fölé, a térképen belülre kerülnek', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [tileSourceOpenerProvider.overrideWithValue(fakeOpener)],
+          child: MaterialApp(
+            home: Scaffold(
+              body: OfflineMap(
+                map: installedMap(),
+                layers: const [SizedBox(key: Key('saját-réteg'))],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.descendant(
+          of: find.byType(FlutterMap),
+          matching: find.byKey(const Key('saját-réteg')),
+        ),
+        findsOneWidget,
+      );
+      // A csemperéteg alatta van (előbb szerepel a gyerekek között).
+      final map = tester.widget<FlutterMap>(find.byType(FlutterMap));
+      expect(map.children.first, isA<VectorTileLayer>());
+      expect((map.children.last as SizedBox).key, const Key('saját-réteg'));
+    });
+
+    testMap('a kívülről adott MapController a térképhez kapcsolódik, '
+        'és a kész jelzés megérkezik', (tester) async {
+      final controller = MapController();
+      var ready = false;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [tileSourceOpenerProvider.overrideWithValue(fakeOpener)],
+          child: MaterialApp(
+            home: Scaffold(
+              body: OfflineMap(
+                map: installedMap(),
+                mapController: controller,
+                onMapReady: () => ready = true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      // Az `onMapReady` a FlutterMap első képkockája utáni callbackben jön.
+      await tester.pump();
+
+      expect(ready, isTrue);
+      final center = controller.camera.center;
+      expect(center.latitude, closeTo(47.7, 0.05));
+      expect(center.longitude, closeTo(18.95, 0.05));
+    });
+
+    testMap('a térkép eseményei kifelé is eljutnak (húzás)', (tester) async {
+      final sources = <MapEventSource>[];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [tileSourceOpenerProvider.overrideWithValue(fakeOpener)],
+          child: MaterialApp(
+            home: Scaffold(
+              body: OfflineMap(
+                map: installedMap(),
+                onMapEvent: (e) => sources.add(e.source),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.drag(find.byType(FlutterMap), const Offset(80, 40));
+      await tester.pump();
+
+      expect(sources, contains(MapEventSource.onDrag));
+    });
+  });
+
   testMap('megnyitási hiba: érthető üzenet, nem összeomlás', (tester) async {
     openError = StateError('sérült');
     await tester.pumpWidget(host(installedMap()));
