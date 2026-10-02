@@ -8,30 +8,8 @@ import 'package:osveny/map/map_file_picker.dart';
 import 'package:osveny/map/map_library_controller.dart';
 import 'package:osveny/map/map_store.dart';
 
+import 'map_test_helpers.dart';
 import 'pmtiles_fixture.dart';
-
-class FakePicker implements MapFilePicker {
-  ImportSource? next;
-  Object? error;
-  int calls = 0;
-
-  @override
-  Future<ImportSource?> pick() async {
-    calls++;
-    final e = error;
-    if (e != null) throw e;
-    return next;
-  }
-}
-
-ImportSource sourceOf(String name, Uint8List bytes) => ImportSource(
-  name: name,
-  length: bytes.length,
-  open: () => Stream.fromIterable([
-    for (var i = 0; i < bytes.length; i += 40)
-      bytes.sublist(i, i + 40 > bytes.length ? bytes.length : i + 40),
-  ]),
-);
 
 void main() {
   late Directory tmp;

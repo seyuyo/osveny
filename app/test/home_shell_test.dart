@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:osveny/data/database.dart';
+import 'package:osveny/map/map_library_controller.dart';
+import 'package:osveny/map/map_store.dart';
 import 'package:osveny/home_shell.dart';
 import 'package:osveny/recording/location_source.dart';
 import 'package:osveny/recording/recording_controller.dart';
@@ -16,6 +20,13 @@ void main() {
       ProviderScope(
         overrides: [
           databaseProvider.overrideWithValue(db),
+          mapStoreProvider.overrideWithValue(
+            MapStore(
+              Directory(
+                '${Directory.systemTemp.path}${Platform.pathSeparator}osveny_no_maps',
+              ),
+            ),
+          ),
           locationSourceProvider.overrideWithValue(ReplayLocationSource([])),
         ],
         child: const MaterialApp(home: HomeShell()),
