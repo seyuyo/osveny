@@ -243,6 +243,37 @@ void main() {
     expect(center(tester).$1, closeTo(walk(3).latDeg, 1e-6));
   });
 
+  testLive('a rögzítés-vezérlő a térképen van', (tester) async {
+    await pumpLive(tester);
+    expect(find.text('Rögzítés'), findsOneWidget);
+  });
+
+  testLive('folytatáskor a követés visszakapcsol', (tester) async {
+    final c = await pumpLive(tester);
+    await startRecording(tester, c);
+    await feed(tester, c, [walk(0), walk(1)]);
+
+    await tester.drag(find.byType(FlutterMap), const Offset(120, 0));
+    await tester.pump();
+    expect(find.byTooltip('Követés'), findsOneWidget);
+
+    unawaited(c.read(recordingControllerProvider.notifier).pause());
+    await settle(
+      tester,
+      () => c.read(recordingControllerProvider).recState == RecState.paused,
+    );
+    unawaited(c.read(recordingControllerProvider.notifier).resume());
+    await settle(
+      tester,
+      () => c.read(recordingControllerProvider).recState == RecState.recording,
+    );
+    await feed(tester, c, [walk(4)]);
+
+    final (lat, _) = center(tester);
+    expect(lat, closeTo(walk(4).latDeg, 1e-6));
+    expect(find.byTooltip('Követés'), findsNothing);
+  });
+
   testLive('szünetben a pozíció eltűnik, a nyomvonal megmarad', (tester) async {
     final c = await pumpLive(tester);
     await startRecording(tester, c);

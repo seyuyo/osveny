@@ -8,6 +8,8 @@ import 'follow_mode.dart';
 import 'live_layers.dart';
 import 'map_store.dart';
 import 'offline_map.dart';
+import '../recording/recording_controller.dart';
+import 'recording_controls.dart';
 
 /// Az offline térkép az élő réteggel: nyomvonal, pozíció és követő mód.
 ///
@@ -69,6 +71,16 @@ class _LiveMapState extends ConsumerState<LiveMap> {
     ref.listen<Fix?>(livePositionProvider, (previous, next) {
       if (next != null && _following) _moveTo(next);
     });
+    // Rögzítés (újra)indulásakor visszakapcsol a követés: a folytatás után a
+    // felhasználó a saját pozícióját akarja látni.
+    ref.listen<RecState>(
+      recordingControllerProvider.select((s) => s.recState),
+      (previous, next) {
+        if (next == RecState.recording && previous != RecState.recording) {
+          setState(() => _following = true);
+        }
+      },
+    );
     final position = ref.watch(livePositionProvider);
 
     return Stack(
@@ -80,6 +92,14 @@ class _LiveMapState extends ConsumerState<LiveMap> {
             onMapReady: _onMapReady,
             onMapEvent: _onMapEvent,
             layers: const [LiveTrackLayer(), PositionLayer()],
+          ),
+        ),
+        const Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            // A forrásmegjelölés fölött.
+            padding: EdgeInsets.only(bottom: 32),
+            child: RecordingControls(),
           ),
         ),
         if (!_following && position != null)
