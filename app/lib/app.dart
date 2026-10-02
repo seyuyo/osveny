@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'features/debug/debug_screen.dart';
+import 'home_shell.dart';
 import 'permissions/permission_gate.dart';
 
-/// Az alkalmazás gyökere. M2-ben a debug képernyő a kezdőképernyő, az
+/// Az alkalmazás gyökere: a főképernyő (Térkép és Debug fül) az
 /// engedélykérés kapuja mögött.
 class OsvenyApp extends StatelessWidget {
   const OsvenyApp({super.key});
@@ -20,7 +20,7 @@ class OsvenyApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const PermissionGate(child: DebugScreen()),
+      home: const PermissionGate(child: HomeShell()),
     );
   }
 }
